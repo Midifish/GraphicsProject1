@@ -247,12 +247,12 @@ function getInputSpheres() {
 // get the input triangles from the standard class URL
 function getInputTriangles() {
     const INPUT_TRIANGLES_URL = 
-        "https://github.com/Midifish/GraphicsProject1/blob/master/triangles.json";
+        "https://Midifish.github.io/blob/master/triangles.json";
         
     // load the spheres file
     var httpReq = new XMLHttpRequest(); // a new http request
     httpReq.open("GET",INPUT_TRIANGLES_URL,false); // init the request
-    httpReq.send(); // send the request
+    httpReq.send(null); // send the request
     var startTime = Date.now();
     while ((httpReq.status !== 200) && (httpReq.readyState !== XMLHttpRequest.DONE)) {
         if ((Date.now()-startTime) > 3000)
