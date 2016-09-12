@@ -247,7 +247,7 @@ function getInputSpheres() {
 // get the input triangles from the standard class URL
 function getInputTriangles() {
     const INPUT_TRIANGLES_URL = 
-        "https://www.dropbox.com/s/0cz28voir5blemf/triangles.json?dl=0";
+        "https://github.com/Midifish/GraphicsProject1/blob/master/triangles.json";
         
     // load the spheres file
     var httpReq = new XMLHttpRequest(); // a new http request
