@@ -82,16 +82,17 @@ VectorMath.multiplyByScalar = function(v, s)
     return new Vector(v.x * s, v.y * s, v.z * s);
 }
 
-function getLightingIntensity(intersectionPoint, surfaceNormalUnit, lightLocation, inputObject)
+function getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputObject)
 {
     //NOTE: we assume light color is white for ambient, diffuse, and specular (1,1,1)
     //so I do not multiply by light color here, as the result would be itself times 1
     var intensity = new Vector(0,0,0);
     var surfaceToLightUnit = VectorMath.normalize(VectorMath.subtract(lightLocation, intersectionPoint));
-    //lambert value is surface normal unit vector dot surface to light unit vector
+    //used in diffuse and specular calculation
     var lambertVal = VectorMath.dot(surfaceNormalUnit, surfaceToLightUnit);
+    //used in specular calculation
     var mirrorReflectionUnit = VectorMath.normalize(VectorMath.subtract(VectorMath.multiplyByScalar(surfaceNormalUnit, 2 * lambertVal), surfaceToLightUnit));
-    var surfaceToEyeUnit = VectorMath.normalize(new Vector(-intersectionPoint.x, -intersectionPoint.y, -intersectionPoint.z));
+    var surfaceToEyeUnit = VectorMath.normalize(VectorMath.subtract(eyePoint, intersectionPoint));
     //get Red intensity
     intensity.x = inputObject.ambient[0] + inputObject.diffuse[0] * lambertVal + inputObject.specular[0] * Math.pow(VectorMath.dot(mirrorReflectionUnit, surfaceToEyeUnit), 5);
     //get Green intensity
@@ -105,8 +106,9 @@ function getLightingIntensity(intersectionPoint, surfaceNormalUnit, lightLocatio
 }
 /* utility functions */
 
+
 // raycast from the eye, through the viewport to find intersections
-function drawPixelsRaycast(context) {
+function drawPixelsRaycastSpheres(context) {
     var inputSpheres = getInputSpheres();
     var inputTriangles = getInputTriangles();
     var w = context.canvas.width;
@@ -117,7 +119,7 @@ function drawPixelsRaycast(context) {
     var currentViewportPoint = new Vector(0,0,0);
     var eyePoint = new Vector(0.5,0.5,-0.5);
     var directionVector = new Vector(0,0,0);
-    var lightLocation = new Vector(2,4,-0.5);
+    var lightLocation = new Vector(2,4,-.5);
     var t = 0;
     if (inputSpheres != String.null) { 
         var numSpheres = inputSpheres.length;
@@ -154,16 +156,11 @@ function drawPixelsRaycast(context) {
                             //get surface normal unit vector for lighting calculation
                             var surfaceNormalUnit = VectorMath.normalize(VectorMath.subtract(intersectionPoint, sphereCenter));
                             //get intensity
-                            var intensity = getLightingIntensity(intersectionPoint, surfaceNormalUnit, lightLocation, inputSpheres[s]);
+                            var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputSpheres[s]);
                             //set pixel colors
                             pixelColor.r = intensity.x*255;
                             pixelColor.g = intensity.y*255;
                             pixelColor.b = intensity.z*255;
-                            drawPixel(
-                                    imagedata,
-                                    Math.floor(ht / horizontalIncrementAmt),
-                                    Math.floor(vt / verticalIncrementAmt),
-                                    pixelColor);
                         }
                         break;
                     }
@@ -247,7 +244,7 @@ function getInputSpheres() {
 // get the input triangles from the standard class URL
 function getInputTriangles() {
     const INPUT_TRIANGLES_URL = 
-        "https://ncsucgclass.github.io/prog1/triangles.json";
+        "https://midifish.github.io/triangles.json";
         
     // load the spheres file
     var httpReq = new XMLHttpRequest(); // a new http request
@@ -358,6 +355,9 @@ function main() {
     var canvas = document.getElementById("viewport"); 
     var context = canvas.getContext("2d");
  
+     // Get the button, and when the user clicks on it, execute myFunction
+    document.getElementById("triangleBtn").onclick = function() {drawRandPixels(context)};
+    
     // Create the image
     //drawRandPixels(context);
       // shows how to draw pixels
@@ -369,5 +369,5 @@ function main() {
       // shows how to read input file, but not how to draw pixels
 
     //draw spheres using raycasting
-    drawPixelsRaycast(context);
+    drawPixelsRaycastSpheres(context);
 }
