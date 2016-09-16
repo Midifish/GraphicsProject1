@@ -82,7 +82,12 @@ VectorMath.multiplyByScalar = function(v, s)
     return new Vector(v.x * s, v.y * s, v.z * s);
 }
 
-function getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputObject)
+VectorMath.crossProduct = function(v1, v2)
+{
+    return new Vector(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
+}
+
+function getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, surfaceLighting)
 {
     //NOTE: we assume light color is white for ambient, diffuse, and specular (1,1,1)
     //so I do not multiply by light color here, as the result would be itself times 1
@@ -94,23 +99,136 @@ function getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, li
     var mirrorReflectionUnit = VectorMath.normalize(VectorMath.subtract(VectorMath.multiplyByScalar(surfaceNormalUnit, 2 * lambertVal), surfaceToLightUnit));
     var surfaceToEyeUnit = VectorMath.normalize(VectorMath.subtract(eyePoint, intersectionPoint));
     //get Red intensity
-    intensity.x = inputObject.ambient[0] + inputObject.diffuse[0] * lambertVal + inputObject.specular[0] * Math.pow(VectorMath.dot(mirrorReflectionUnit, surfaceToEyeUnit), 5);
+    intensity.x = surfaceLighting.ambient[0] + surfaceLighting.diffuse[0] * lambertVal + surfaceLighting.specular[0] * Math.pow(VectorMath.dot(mirrorReflectionUnit, surfaceToEyeUnit), 5);
     //get Green intensity
-    intensity.y = inputObject.ambient[1] + inputObject.diffuse[1] * lambertVal + inputObject.specular[1] * Math.pow(VectorMath.dot(mirrorReflectionUnit, surfaceToEyeUnit), 5);
+    intensity.y = surfaceLighting.ambient[1] + surfaceLighting.diffuse[1] * lambertVal + surfaceLighting.specular[1] * Math.pow(VectorMath.dot(mirrorReflectionUnit, surfaceToEyeUnit), 5);
     //get Blue intensity
-    intensity.z = inputObject.ambient[2] + inputObject.diffuse[2] * lambertVal + inputObject.specular[2] * Math.pow(VectorMath.dot(mirrorReflectionUnit, surfaceToEyeUnit), 5);
-    Math.min(intensity.x, 1);
-    Math.min(intensity.y, 1);
-    Math.min(intensity.z, 1);
+    intensity.z = surfaceLighting.ambient[2] + surfaceLighting.diffuse[2] * lambertVal + surfaceLighting.specular[2] * Math.pow(VectorMath.dot(mirrorReflectionUnit, surfaceToEyeUnit), 5);
+    intensity.x = Math.min(intensity.x, 1);
+    intensity.y = Math.min(intensity.y, 1);
+    intensity.z = Math.min(intensity.z, 1);
     return intensity;
+}
+
+function getTriangleIntersection(V1, V2, V3, O, D)
+{
+    var e1, e2;  //Edge1, Edge2
+    var P, Q, T;
+    var det, inv_det, u, v;
+    var t;
+    var EPSILON = .00001;
+    //Find vectors for two edges sharing V1
+    e1 = VectorMath.subtract(V2, V1);
+    e2 = VectorMath.subtract(V3, V1);
+    //Begin calculating determinant - also used to calculate u parameter
+    P = VectorMath.crossProduct(D, e2);
+    //if determinant is near zero, ray lies in plane of triangle or ray is parallel to plane of triangle
+    det = VectorMath.dot(e1, P);
+    //NOT CULLING
+    if(det > -EPSILON && det < EPSILON) return 0;
+    inv_det = 1 / det;
+
+    //calculate distance from V1 to ray origin
+    T = VectorMath.subtract(O, V1);
+
+    //Calculate u parameter and test bound
+    u = VectorMath.dot(T, P) * inv_det;
+    //The intersection lies outside of the triangle
+    if(u < 0 || u > 1) return 0;
+
+    //Prepare to test v parameter
+    Q = VectorMath.crossProduct(T, e1);
+
+    //Calculate V parameter and test bound
+    v = VectorMath.dot(D, Q) * inv_det;
+    //The intersection lies outside of the triangle
+    if(v < 0 || (u + v) > 1) return 0;
+
+    t = VectorMath.dot(e2, Q) * inv_det;
+
+    if(t > EPSILON) { //ray intersection
+        return t;
+    }
+
+    // No hit, no win
+    return 0;
 }
 /* utility functions */
 
+// raycast from the eye, through the viewport to find intersections
+function drawPixelsRaycastTriangles(context) {
+    var inputTriangles = getInputTriangles();
+    var w = context.canvas.width;
+    var h = context.canvas.height;
+    var imagedata = context.createImageData(w,h);
+    var verticalIncrementAmt = 1/(h-1);
+    var horizontalIncrementAmt = 1/(w-1);
+    var currentViewportPoint = new Vector(0,0,0);
+    var eyePoint = new Vector(0.5,0.5,-0.5);
+    var directionVector = new Vector(0,0,0);
+    var lightLocation = new Vector(2,4,-.5);
+    var t = 0;
+    if (inputTriangles != String.null) { 
+        var numTriangles = inputTriangles.triangles.length;
+        //loop through each verticle location
+        for(var vt = 0; vt < 1; vt += verticalIncrementAmt)
+        {
+            //loop through each horizontal location
+            for(var ht = 0; ht < 1; ht += horizontalIncrementAmt)
+            {
+                currentViewportPoint.x = ht;
+                currentViewportPoint.y = vt;
+                //find direction of raycast
+                directionVector = VectorMath.subtract(currentViewportPoint, eyePoint);
+                //check each triangle for an intersection
+                for(var s = 0; s < numTriangles; s++)
+                {
+                    var pixelColor = new Color(0,0,0,255);
+                    var currentTriangle = inputTriangles.triangles[s];
+                    var v1 = inputTriangles.vertices[currentTriangle[0]];
+                    var v2 = inputTriangles.vertices[currentTriangle[1]];
+                    var v3 = inputTriangles.vertices[currentTriangle[2]];
+                    var vectorV1 = new Vector(v1[0], v1[1], v1[2]);
+                    var vectorV2 = new Vector(v2[0], v2[1], v2[2]);
+                    var vectorV3 = new Vector(v3[0], v3[1], v3[2]);
+                    t = getTriangleIntersection(
+                        vectorV1,
+                        vectorV2,
+                        vectorV3,
+                        eyePoint,
+                        directionVector);
+                        if(t > 1)
+                        {
+                            var intersectionPoint = new Vector(
+                                eyePoint.x + t * directionVector.x,
+                                eyePoint.y + t * directionVector.y,
+                                eyePoint.z + t * directionVector.z);
+                            //get surface normal unit vector for lighting calculation
+                            var surfaceNormalUnit = VectorMath.normalize(VectorMath.crossProduct(VectorMath.subtract(vectorV2, vectorV1), VectorMath.subtract(vectorV3, vectorV1)));
+                            //get intensity
+                            var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputTriangles.material);
+                            //set pixel colors
+                            pixelColor.r = intensity.x*255;
+                            pixelColor.g = intensity.y*255;
+                            pixelColor.b = intensity.z*255;
+                        }
+                        break;
+                }
+                drawPixel(
+                    imagedata,
+                    Math.floor(ht / horizontalIncrementAmt),
+                    Math.floor(vt / verticalIncrementAmt),
+                    pixelColor);
+            }
+        }
+         // end for Triangles
+        context.putImageData(imagedata, 0, 0);
+    }
+} // end draw raycast pixels
 
 // raycast from the eye, through the viewport to find intersections
 function drawPixelsRaycastSpheres(context) {
     var inputSpheres = getInputSpheres();
-    var inputTriangles = getInputTriangles();
     var w = context.canvas.width;
     var h = context.canvas.height;
     var imagedata = context.createImageData(w,h);
@@ -356,7 +474,7 @@ function main() {
     var context = canvas.getContext("2d");
  
      // Get the button, and when the user clicks on it, execute myFunction
-    document.getElementById("triangleBtn").onclick = function() {drawRandPixels(context)};
+    document.getElementById("triangleBtn").onclick = function() {drawPixelsRaycastTriangles(context)};
     
     // Create the image
     //drawRandPixels(context);
