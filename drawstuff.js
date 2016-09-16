@@ -211,8 +211,8 @@ function drawPixelsRaycastTriangles(context) {
                             pixelColor.r = intensity.x*255;
                             pixelColor.g = intensity.y*255;
                             pixelColor.b = intensity.z*255;
+                            break;
                         }
-                        break;
                 }
                 drawPixel(
                     imagedata,
