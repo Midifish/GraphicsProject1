@@ -92,7 +92,7 @@ VectorMath.crossProduct = function(v1, v2)
     return new Vector(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
 }
 
-function getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, surfaceLighting)
+function getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, surfaceLighting, nVal)
 {
     //NOTE: we assume light color is white for ambient, diffuse, and specular (1,1,1)
     //so I do not multiply by light color here, as the result would be itself times 1
@@ -106,7 +106,7 @@ function getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, li
     //used for Blinn-Phong calculation
     var halfwayVectorUnit = VectorMath.normalize(VectorMath.add(surfaceToLightUnit, surfaceToEyeUnit));
     //specular value for Blinn-Phong
-    var blinnPhongSpecular = Math.pow(VectorMath.dot(surfaceNormalUnit, halfwayVectorUnit), 5);
+    var blinnPhongSpecular = Math.pow(VectorMath.dot(surfaceNormalUnit, halfwayVectorUnit), nVal);
     //get Red intensity
     intensity.x = surfaceLighting.ambient[0] + surfaceLighting.diffuse[0] * lambertVal + surfaceLighting.specular[0] * blinnPhongSpecular;
     //get Green intensity
@@ -191,6 +191,7 @@ function drawPixelsRaycastSpheresAndTriangles(context, lightLocation) {
                 //find direction of raycast
                 directionVector = VectorMath.subtract(currentViewportPoint, eyePoint);
                 var pixelColor = new Color(0,0,0,255);
+                t = 0;
                 //check each triangle for an intersection
                 for(var tr = 0; tr < numTriangles; tr++)
                 {
@@ -216,12 +217,11 @@ function drawPixelsRaycastSpheresAndTriangles(context, lightLocation) {
                         //get surface normal unit vector for lighting calculation
                         var surfaceNormalUnit = VectorMath.normalize(VectorMath.crossProduct(VectorMath.subtract(vectorV2, vectorV1), VectorMath.subtract(vectorV3, vectorV1)));
                         //get intensity
-                        var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputTriangles.material);
+                        var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputTriangles.material, 5);
                         //set pixel colors
                         pixelColor.r = intensity.x*255;
                         pixelColor.g = intensity.y*255;
                         pixelColor.b = intensity.z*255;
-                        break;
                     }
                 }
                 //check each sphere for an intersection
@@ -249,13 +249,12 @@ function drawPixelsRaycastSpheresAndTriangles(context, lightLocation) {
                                 //get surface normal unit vector for lighting calculation
                                 var surfaceNormalUnit = VectorMath.normalize(VectorMath.subtract(intersectionPoint, sphereCenter));
                                 //get intensity
-                                var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputSpheres[s]);
+                                var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputSpheres[s], inputSpheres[s].n);
                                 //set pixel colors
                                 pixelColor.r = intensity.x*255;
                                 pixelColor.g = intensity.y*255;
                                 pixelColor.b = intensity.z*255;
                             }
-                            break;
                         }
                     }
                 }
@@ -321,7 +320,7 @@ function drawPixelsRaycastTriangles(context, lightLocation) {
                             //get surface normal unit vector for lighting calculation
                             var surfaceNormalUnit = VectorMath.normalize(VectorMath.crossProduct(VectorMath.subtract(vectorV2, vectorV1), VectorMath.subtract(vectorV3, vectorV1)));
                             //get intensity
-                            var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputTriangles.material);
+                            var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputTriangles.material, 5);
                             //set pixel colors
                             pixelColor.r = intensity.x*255;
                             pixelColor.g = intensity.y*255;
@@ -366,11 +365,12 @@ function drawPixelsRaycastSpheres(context, lightLocation) {
                 //find direction of raycast
                 directionVector = VectorMath.subtract(currentViewportPoint, eyePoint);
                 //check each sphere for an intersection
+                var pixelColor = new Color(0,0,0,255);
+                t = 0;
                 for(var s = 0; s < numSpheres; s++)
                 {
                     var sphereCenter = new Vector(inputSpheres[s].x, inputSpheres[s].y, inputSpheres[s].z);
                     var sphereRadius = inputSpheres[s].r;
-                    var pixelColor = new Color(0,0,0,255);
                     var a = VectorMath.dot(directionVector, directionVector);
                     var b = 2 * VectorMath.dot(directionVector, VectorMath.subtract(eyePoint, sphereCenter));
                     var c = VectorMath.dot(VectorMath.subtract(eyePoint, sphereCenter), VectorMath.subtract(eyePoint, sphereCenter)) - (sphereRadius * sphereRadius);
@@ -378,23 +378,27 @@ function drawPixelsRaycastSpheres(context, lightLocation) {
                     var discriminant = Math.pow(b,2) - 4 * a * c;
                     if(discriminant >= 0)
                     {
-                        t = Math.min((-b + Math.sqrt(discriminant))/(2*a), (-b - Math.sqrt(discriminant))/(2*a));
-                        if(t > 1)
+                        var st = Math.min((-b + Math.sqrt(discriminant))/(2*a), (-b - Math.sqrt(discriminant))/(2*a));
+                        //check if current hit is closer than previous one, if there was one
+                        if(t == 0 || st < t)
                         {
-                            var intersectionPoint = new Vector(
-                                eyePoint.x + t * directionVector.x,
-                                eyePoint.y + t * directionVector.y,
-                                eyePoint.z + t * directionVector.z);
-                            //get surface normal unit vector for lighting calculation
-                            var surfaceNormalUnit = VectorMath.normalize(VectorMath.subtract(intersectionPoint, sphereCenter));
-                            //get intensity
-                            var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputSpheres[s]);
-                            //set pixel colors
-                            pixelColor.r = intensity.x*255;
-                            pixelColor.g = intensity.y*255;
-                            pixelColor.b = intensity.z*255;
+                            t = st;
+                            if(t > 1)
+                            {
+                                var intersectionPoint = new Vector(
+                                    eyePoint.x + t * directionVector.x,
+                                    eyePoint.y + t * directionVector.y,
+                                    eyePoint.z + t * directionVector.z);
+                                //get surface normal unit vector for lighting calculation
+                                var surfaceNormalUnit = VectorMath.normalize(VectorMath.subtract(intersectionPoint, sphereCenter));
+                                //get intensity
+                                var intensity = getLightingIntensity(eyePoint, intersectionPoint, surfaceNormalUnit, lightLocation, inputSpheres[s], inputSpheres[s].n);
+                                //set pixel colors
+                                pixelColor.r = intensity.x*255;
+                                pixelColor.g = intensity.y*255;
+                                pixelColor.b = intensity.z*255;
+                            }
                         }
-                        break;
                     }
                 }
                 drawPixel(
@@ -454,7 +458,7 @@ function drawRandPixels(context) {
 
 // get the input spheres from the standard class URL
 function getInputSpheres() {
-    const INPUT_SPHERES_URL = 
+    const INPUT_SPHERES_URL = //"https://midifish.github.io/testSpheres.json";
         "https://ncsucgclass.github.io/prog1/spheres.json";
         
     // load the spheres file
