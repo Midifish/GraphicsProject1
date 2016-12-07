@@ -7,13 +7,31 @@ var renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
+/*// instantiate a loader
 var loader = new THREE.ImageLoader();
 loader.setCrossOrigin("anonymous");
+// load a image resource
 loader.load(
+	// resource URL
+	'midifish.github.io/images/froggerbackground.png',
+	// Function when resource is loaded
+	function ( image ) {
+		// do something with it
 
-
-)
-
+		// like drawing a part of it on a canvas
+		var canvas = document.createElement( 'canvas' );
+		var context = canvas.getContext( '2d' );
+		context.drawImage( image, 1000, 1000 );
+	},
+	// Function called when download progresses
+	function ( xhr ) {
+		console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+	},
+	// Function called when download errors
+	function ( xhr ) {
+		console.log( 'An error happened' );
+	}
+);*/
 
 //load textures
 var backgroundTexture = new THREE.TextureLoader().load( 'images/froggerbackground.png' );
@@ -34,7 +52,7 @@ var mediumBoxGeometry = new THREE.BoxGeometry( 1.5, .4, .25);
 var longBoxGeometry = new THREE.BoxGeometry( 2, .5, .25);
 
 //create materials
-var backgroundMaterial = new THREE.MeshBasicMaterial( {map: backgroundTexture})
+var backgroundMaterial = new THREE.MeshBasicMaterial( { map: backgroundTexture } )
 var frogMaterial = new THREE.MeshBasicMaterial( { map: frogTexture } );
 var car1Material = new THREE.MeshBasicMaterial( { map: car1Texture } );
 var car2Material = new THREE.MeshBasicMaterial( { map: car2Texture } );
@@ -68,7 +86,7 @@ var log2b = new THREE.Mesh( mediumBoxGeometry, log1Material );
 var log3a = new THREE.Mesh( mediumBoxGeometry, log1Material );
 var log4a = new THREE.Mesh( shortBoxGeometry, log1Material );
 var log4b = new THREE.Mesh( shortBoxGeometry, log1Material );
-var log4c = new THREE.Mesh( mediumBoxGeometry, log1Material );
+var log4c = new THREE.Mesh( shortBoxGeometry, log1Material );
 var log5a = new THREE.Mesh( mediumBoxGeometry, log1Material );
 
 //game parameters
@@ -79,6 +97,7 @@ var livesElement;
 
 //audio files
 var jump = new Audio('sounds/sound-frogger-hop.wav');
+var squash = new Audio('sounds/sound-frogger-squash.wav');
 
 init();
 update();
@@ -275,11 +294,10 @@ function checkCollisions()
 		objStandingOnIdx = -1;
 		if(lives > 0)
         {
-        	camera.position.x = origPos[0].x;
-        	camera.position.y = -4;
         	frog.position.x = origPos[0].x;
 			frog.position.y = origPos[0].y;
             lives--;
+            squash.play();
             if(lives == 0)
             {
             	livesElement.innerHTML = "Game Over!";
