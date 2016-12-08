@@ -111,7 +111,7 @@ function init()
     levelElement.innerHTML = "Level: " + level; 
 	scene.add(background);
 	//camera.position.z = 5;
-	camera.position.set(.24,-4,1.5);
+	camera.position.set(.24,6,1.5);
 	camera.rotation.x = Math.PI/4;
 	//add game objects to array
 	gameObjects.push(car1a);
