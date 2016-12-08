@@ -2,7 +2,7 @@ var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
 var renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
+renderer.setSize( window.innerWidth, window.innerHeight * 6/7 );
 document.body.appendChild( renderer.domElement );
 
 //load textures
@@ -85,6 +85,7 @@ var livesElement;
 var currMaxDist = -3.25;
 var points = 0;
 var level = 1;
+var firstPersonMode = false;
 
 //audio files
 var jump = new Audio('sounds/sound-frogger-hop.wav');
@@ -283,6 +284,8 @@ function handleKeyDown(event) {
 	        case "KeyD": // translate down, rotate clockwise with shift
 	        		frog.rotation.z=-Math.PI/2;
 	        		frog.position.x+=.5;
+	        case "KeyP":
+	        		camera.rotation = Math.PI/2;
 	    } // end switch
 		if(frog.position.y > currMaxDist)
 		{
