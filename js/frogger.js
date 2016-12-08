@@ -1,37 +1,9 @@
-
-
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
-
-/*// instantiate a loader
-var loader = new THREE.ImageLoader();
-loader.setCrossOrigin("anonymous");
-// load a image resource
-loader.load(
-	// resource URL
-	'midifish.github.io/images/froggerbackground.png',
-	// Function when resource is loaded
-	function ( image ) {
-		// do something with it
-
-		// like drawing a part of it on a canvas
-		var canvas = document.createElement( 'canvas' );
-		var context = canvas.getContext( '2d' );
-		context.drawImage( image, 1000, 1000 );
-	},
-	// Function called when download progresses
-	function ( xhr ) {
-		console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-	},
-	// Function called when download errors
-	function ( xhr ) {
-		console.log( 'An error happened' );
-	}
-);*/
 
 //load textures
 var backgroundTexture = new THREE.TextureLoader().load( 'images/froggerbackground.png' );
@@ -42,10 +14,13 @@ var car3Texture = new THREE.TextureLoader().load( 'images/car3.png' );
 var car4Texture = new THREE.TextureLoader().load( 'images/car4.png' );
 var car5Texture = new THREE.TextureLoader().load( 'images/car5.png' );
 var log1Texture = new THREE.TextureLoader().load( 'images/log1.png' );
+var padTexture = new THREE.TextureLoader().load( 'images/frogger_pad.png' );
+var turtleTexture = new THREE.TextureLoader().load( 'images/turtle.png' );
+var starTexture = new THREE.TextureLoader().load( 'images/star.png' );
 
 //load geometries
 var backgroundGeometry = new THREE.BoxGeometry(6, 7, 0.1);
-var frogGeometry = new THREE.BoxGeometry( .25, .25, .15);
+var frogGeometry = new THREE.BoxGeometry( .25, .25, .1);
 var cubeGeometry = new THREE.BoxGeometry( .5, .4, .25 );
 var shortBoxGeometry = new THREE.BoxGeometry( .75, .4, .25);
 var mediumBoxGeometry = new THREE.BoxGeometry( 1.5, .4, .25);
@@ -60,6 +35,9 @@ var car3Material = new THREE.MeshBasicMaterial( { map: car3Texture } );
 var car4Material = new THREE.MeshBasicMaterial( { map: car4Texture } );
 var car5Material = new THREE.MeshBasicMaterial( { map: car5Texture } );
 var log1Material = new THREE.MeshBasicMaterial( { map: log1Texture } );
+var padMaterial = new THREE.MeshBasicMaterial( { map: padTexture } );
+var turtleMaterial = new THREE.MeshBasicMaterial( { map: turtleTexture} );
+var starMaterial = new THREE.MeshBasicMaterial( {map: starTexture } );
 //create objects
 var gameObjects = [];
 var origPos = [];
@@ -84,20 +62,41 @@ var log1a = new THREE.Mesh( longBoxGeometry, log1Material );
 var log2a = new THREE.Mesh( mediumBoxGeometry, log1Material );
 var log2b = new THREE.Mesh( mediumBoxGeometry, log1Material );
 var log3a = new THREE.Mesh( mediumBoxGeometry, log1Material );
-var log4a = new THREE.Mesh( shortBoxGeometry, log1Material );
-var log4b = new THREE.Mesh( shortBoxGeometry, log1Material );
-var log4c = new THREE.Mesh( shortBoxGeometry, log1Material );
-var log5a = new THREE.Mesh( mediumBoxGeometry, log1Material );
+var log5a = new THREE.Mesh( longBoxGeometry, log1Material );
+var pad1 = new THREE.Mesh( frogGeometry, padMaterial );
+var pad2 = new THREE.Mesh( frogGeometry, padMaterial );
+var pad3 = new THREE.Mesh( frogGeometry, padMaterial );
+var pad4 = new THREE.Mesh( frogGeometry, padMaterial );
+var pad5 = new THREE.Mesh( frogGeometry, padMaterial );
+var turtle1 = new THREE.Mesh( cubeGeometry, turtleMaterial );
+var turtle2 = new THREE.Mesh( cubeGeometry, turtleMaterial );
+var turtle3 = new THREE.Mesh( cubeGeometry, turtleMaterial );
+var star1 = new THREE.Mesh( frogGeometry, starMaterial );
+var star2 = new THREE.Mesh( frogGeometry, starMaterial );
+var star3 = new THREE.Mesh( frogGeometry, starMaterial );
+var star4 = new THREE.Mesh( frogGeometry, starMaterial );
+var star5 = new THREE.Mesh( frogGeometry, starMaterial );
 
 //game parameters
 var objSpeed = 0.05;
 var objStandingOnIdx = -1;
 var lives = 3;
 var livesElement;
+var currMaxDist = -3.25;
+var points = 0;
+var level = 1;
 
 //audio files
 var jump = new Audio('sounds/sound-frogger-hop.wav');
 var squash = new Audio('sounds/sound-frogger-squash.wav');
+var coin = new Audio('sounds/sound-frogger-coin-in.wav');
+var plunk = new Audio('sounds/sound-frogger-plunk.wav');
+var theme = new Audio('sounds/sound-frogger-theme.wav');
+var gameover = new Audio('sounds/sound-frogger-gameover.mp3');
+var win = new Audio('sounds/sound-frogger-win.wav');
+
+theme.loop = true;
+theme.play();
 
 init();
 update();
@@ -106,11 +105,13 @@ function init()
 {
 	livesElement = document.getElementById("lives");
     livesElement.innerHTML = "Lives: " + lives;            
-
+	pointsElement = document.getElementById("score");
+    pointsElement.innerHTML = "Score: " + points; 
+	levelElement = document.getElementById("level");
+    levelElement.innerHTML = "Level: " + level; 
 	scene.add(background);
-	camera.position.x = .24;
-	camera.position.z = 1.5;
-	camera.position.y = -4;
+	//camera.position.z = 5;
+	camera.position.set(.24,-4,1.5);
 	camera.rotation.x = Math.PI/4;
 	//add game objects to array
 	gameObjects.push(car1a);
@@ -130,16 +131,24 @@ function init()
 	gameObjects.push(log1a);
 	gameObjects.push(log2a);
 	gameObjects.push(log2b);
+	gameObjects.push(turtle1);
+	gameObjects.push(turtle2);
+	gameObjects.push(turtle3);
 	gameObjects.push(log3a);
-	gameObjects.push(log4a);
-	gameObjects.push(log4b);
-	gameObjects.push(log4c);
 	gameObjects.push(log5a);
+	gameObjects.push(pad1);
+	gameObjects.push(pad2);
+	gameObjects.push(pad3);
+	gameObjects.push(pad4);
+	gameObjects.push(pad5);
+	gameObjects.push(star1);
+	gameObjects.push(star2);
+	gameObjects.push(star3);
+	gameObjects.push(star4);
+	gameObjects.push(star5);
 
 	//initialize player object
-	frog.position.x = 0.24;
-	frog.position.y = -3.25;
-	frog.position.z = frog.geometry.parameters.depth/2;
+	frog.position.set(0.24, -3.25, frog.geometry.parameters.depth);
 	var objOrigPosVec = new THREE.Vector2(frog.position.x, frog.position.y);
 	origPos.push(objOrigPosVec);
 	scene.add(frog);
@@ -157,10 +166,10 @@ function init()
 			row += 0.52;
 			columnOrig *= -1;
 			column = columnOrig;
-			speed+= objSpeed/15 * speed/Math.abs(speed);
+			speed+= objSpeed/20 * speed/Math.abs(speed);
 			speed*=-1;
 			//save original positions
-			objOrigPosVec = new THREE.Vector2(column, row);
+			objOrigPosVec = new THREE.Vector2(column + (gameObjects[idx].geometry.parameters.width/2 * columnOrig/Math.abs(columnOrig)), row);
 			origPos.push(objOrigPosVec);
 			origPos.push(objOrigPosVec);
 			if(idx != 12)
@@ -168,28 +177,26 @@ function init()
 		}
 		column += ((5.5) * ((idx % 3) + 1)/4 * -columnOrig/Math.abs(columnOrig));
 		objSpeeds[idx] = speed;
-		gameObjects[idx].position.x = column;
-		gameObjects[idx].position.y = row;
-		gameObjects[idx].position.z = gameObjects[idx].geometry.parameters.depth/2;
+		gameObjects[idx].position.set(column, row, gameObjects[idx].geometry.parameters.depth/2);
 		scene.add(gameObjects[idx]);
 	}
 	row+=0.52;
 	speed*=-1;
 	columnOrig*=-1;
-	//initialize logs
-	for(var idx = 14; idx < gameObjects.length; idx++)
+	//initialize logs & turtles
+	for(var idx = 14; idx < (gameObjects.length - 10); idx++)
 	{
 		//new row
-		if(idx == 14 || idx ==15 || idx == 17 || idx == 18 || idx == 21)
+		if(idx == 14 || idx ==15 || idx == 17 || idx == 20 || idx == 21)
 		{
 			row += 0.52;
 			columnOrig *= -1;
 			column = columnOrig;
-			speed+= objSpeed/15 * speed/Math.abs(speed);
+			speed+= objSpeed/20 * speed/Math.abs(speed);
 			speed*=-1;
 			//save original positions
-			objOrigPosVec = new THREE.Vector2(column, row);
-			if(idx == 14 || idx == 17 || idx == 21)
+			objOrigPosVec = new THREE.Vector2(column + (gameObjects[idx].geometry.parameters.width/2 * columnOrig/Math.abs(columnOrig)), row);
+			if(idx == 14 || idx == 20 || idx == 21)
 			{
 				origPos.push(objOrigPosVec);
 			}
@@ -198,19 +205,54 @@ function init()
 				origPos.push(objOrigPosVec);
 				origPos.push(objOrigPosVec);				
 			}
-			if(idx == 18)
+			//turtles
+			if(idx == 17)
 			{
 				origPos.push(objOrigPosVec);
 				origPos.push(objOrigPosVec);		
-				origPos.push(objOrigPosVec);						
+				origPos.push(objOrigPosVec);
 			}
 		}
-		column += ((5.5) * ((idx % 3) + 1)/4 * -columnOrig/Math.abs(columnOrig));
-		objSpeeds[idx] = speed;
-		gameObjects[idx].position.x = column;
-		gameObjects[idx].position.y = row;
+		column += ((5.5) * ((idx % 3) + 1)/5 * -columnOrig/Math.abs(columnOrig));
+		if(idx > 16 && idx < 20)
+			objSpeeds[idx] = speed/4;
+		else if(idx == 21)
+			objSpeeds[idx] = speed/2;
+		else
+			objSpeeds[idx] = speed;
+		gameObjects[idx].position.set(column,row,0);
 		scene.add(gameObjects[idx]);
 	}
+	row+=.52;
+	//initialize pads
+	pad1.position.set(-2.55,row,0.05);
+	pad2.position.set(-1.25,row,0.05);
+	pad3.position.set(0,row,0.05);
+	pad4.position.set(1.25,row,0.05);
+	pad5.position.set(2.55,row,0.05);
+
+	star1.position.set(-2.55,row,-1);
+	star2.position.set(-1.25,row,-1);
+	star3.position.set(0,row,-1);
+	star4.position.set(1.25,row,-1);
+	star5.position.set(2.55,row,-1);
+	star1.rotation.x = Math.PI/2;
+	star2.rotation.x = Math.PI/2;
+	star3.rotation.x = Math.PI/2;
+	star4.rotation.x = Math.PI/2;
+	star5.rotation.x = Math.PI/2;
+
+	scene.add(pad1);
+	scene.add(pad2);
+	scene.add(pad3);
+	scene.add(pad4);
+	scene.add(pad5);
+	scene.add(star1);
+	scene.add(star2);
+	scene.add(star3);
+	scene.add(star4);
+	scene.add(star5);
+
 }
 
 
@@ -221,27 +263,41 @@ function handleKeyDown(event) {
 	objStandingOnIdx = -1;
 	if(lives != 0)
 	{
+		jump.pause();
+		jump.currentTime = 0;
 	    jump.play();
 	    switch (event.code) {
 	        // model transformation
 	        case "KeyW": // translate left, rotate left with shift
+	        		frog.rotation.z=0;
 	        		frog.position.y+=.52;
 	            break;
 	        case "KeyA": // translate right, rotate right with shift
+	        		frog.rotation.z=Math.PI/2;
 	        		frog.position.x-=.5;
 	            break;
 	        case "KeyS": // translate up, rotate counterclockwise with shift 
+	        		frog.rotation.z=Math.PI;
 	        		frog.position.y-=.52;
 	            break;
 	        case "KeyD": // translate down, rotate clockwise with shift
+	        		frog.rotation.z=-Math.PI/2;
 	        		frog.position.x+=.5;
-	    } // end switch		
+	    } // end switch
+		if(frog.position.y > currMaxDist)
+		{
+			currMaxDist = frog.position.y;
+			points += 100;
+		}
+		pointsElement.innerHTML = "Score: " + points;	
 	}
 } // end handleKeyDown
 
+var bobVal = 0;
+
 function moveSceneObjects()
 {
-	for(var objNum = 0; objNum < gameObjects.length; objNum++)
+	for(var objNum = 0; objNum < (gameObjects.length - 10); objNum++)
 	{
 		var currObj = gameObjects[objNum];
 		if((currObj.position.x - currObj.geometry.parameters.width/2) > 2.75 || (currObj.position.x + currObj.geometry.parameters.width/2) < -2.75)
@@ -250,6 +306,12 @@ function moveSceneObjects()
 		}
 		else
 			currObj.position.x+=objSpeeds[objNum];
+		//turtles bobbing
+		if(objNum > 16 && objNum < 20)
+		{
+			currObj.position.z = -currObj.geometry.parameters.depth/6 + currObj.geometry.parameters.depth/6 * Math.sin(bobVal);
+			bobVal+=0.005;
+		}
 	}
 	if(objStandingOnIdx != -1)
 	{
@@ -277,8 +339,13 @@ function checkCollisions()
 		for(var currPlayerVert = 0; currPlayerVert < playerWorldVerts.length; currPlayerVert++)
 		{
 			//case player's vertex is within the bounding box of an object (collision occurs)
-			if(playerWorldVerts[currPlayerVert].x < objVertTopRightClosest.x && playerWorldVerts[currPlayerVert].y < objVertTopRightClosest.y
-				&& playerWorldVerts[currPlayerVert].x > objVertBottomLeftFurthest.x && playerWorldVerts[currPlayerVert].y > objVertBottomLeftFurthest.y)
+			if(playerWorldVerts[currPlayerVert].x < objVertTopRightClosest.x 
+				&& playerWorldVerts[currPlayerVert].y < objVertTopRightClosest.y
+				&& playerWorldVerts[currPlayerVert].z < objVertTopRightClosest.z
+				&& playerWorldVerts[currPlayerVert].x > objVertBottomLeftFurthest.x 
+				&& playerWorldVerts[currPlayerVert].y > objVertBottomLeftFurthest.y
+				&& playerWorldVerts[currPlayerVert].z > objVertBottomLeftFurthest.z
+				)
 			{
 				if(frog.position.y > 0)
 					objStandingOnIdx = objNum;
@@ -297,15 +364,78 @@ function checkCollisions()
         	frog.position.x = origPos[0].x;
 			frog.position.y = origPos[0].y;
             lives--;
-            squash.play();
+			if(frog.position.y < 0 && collided)
+			{
+	            squash.pause();
+	            squash.currentTime = 0;
+	            squash.play();
+			}
+			else
+			{
+				plunk.pause();
+				plunk.currentTime = 0;
+				plunk.play();
+			}
             if(lives == 0)
             {
+            	theme.pause();
+            	gameover.pause();
+            	gameover.currentTime = 0;
+            	gameover.play();
             	livesElement.innerHTML = "Game Over!";
             	frog.position.z = -100;
             }
             else
             	livesElement.innerHTML = "Lives: " + lives;            
         }
+	}
+	//condition level complete (hopped onto pad)
+	if(frog.position.y > 2.47 && collided)
+	{
+		//activate star
+		switch(objStandingOnIdx)
+		{
+			case (gameObjects.length - 10):
+				star1.position.z = 0.3;
+				break;
+			case (gameObjects.length - 9):
+				star2.position.z = 0.3;
+				break;
+			case (gameObjects.length - 8):
+				star3.position.z = 0.3;
+				break;
+			case (gameObjects.length - 7):
+				star4.position.z = 0.3;
+				break;
+			case (gameObjects.length - 6):
+				star5.position.z = 0.3;
+		}
+		coin.play();
+		currMaxDist = -3.25;
+		lives = 3;
+		livesElement.innerHTML = "Lives: " + lives;            
+		points+=1000;
+		pointsElement.innerHTML = "Score: " + points;	
+		frog.rotation.z = 0;
+		frog.position.x = origPos[0].x;
+		frog.position.y = origPos[0].y;
+		objStandingOnIdx = -1;
+		for(var objNum = 0; objNum < gameObjects.length - 10; objNum++)
+		{
+			objSpeeds[objNum] += 0.005 * objSpeeds[objNum]/Math.abs(objSpeeds[objNum]);
+		}
+		if(level == 5)
+		{
+			theme.pause();
+			theme.currentTime = 0;
+			win.play();
+			levelElement.innerHTML = "You Win!";
+		}
+		else
+		{
+			level++;
+			levelElement.innerHTML = "Level: " + level;
+		}
 	}
 }
 
