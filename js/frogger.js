@@ -395,49 +395,75 @@ function checkCollisions()
 	//condition level complete (hopped onto pad)
 	if(frog.position.y > 2.47 && collided)
 	{
+		var activateNextLevel = false;
 		//activate star
 		switch(objStandingOnIdx)
 		{
 			case (gameObjects.length - 10):
-				star1.position.z = 0.3;
+				if(star1.position.z != 0.4)
+				{
+					star1.position.z = 0.4;
+					activateNextLevel = true;
+				}
 				break;
 			case (gameObjects.length - 9):
-				star2.position.z = 0.3;
+				if(star2.position.z != 0.4)
+				{
+					star2.position.z = 0.4;
+					activateNextLevel = true;
+				}
 				break;
 			case (gameObjects.length - 8):
-				star3.position.z = 0.3;
+				if(star3.position.z != 0.4)
+				{
+					star3.position.z = 0.4;
+					activateNextLevel = true;
+				}
 				break;
 			case (gameObjects.length - 7):
-				star4.position.z = 0.3;
+				if(star4.position.z != 0.4)
+				{
+					star5.position.z = 0.4;
+					activateNextLevel = true;
+				}
 				break;
 			case (gameObjects.length - 6):
-				star5.position.z = 0.3;
+				if(star5.position.z != 0.4)
+				{
+					star5.position.z = 0.4;
+					activateNextLevel = true;
+				}
 		}
-		coin.play();
-		currMaxDist = -3.25;
-		lives = 3;
-		livesElement.innerHTML = "Lives: " + lives;            
-		points+=1000;
-		pointsElement.innerHTML = "Score: " + points;	
+		objStandingOnIdx = -1;
 		frog.rotation.z = 0;
 		frog.position.x = origPos[0].x;
 		frog.position.y = origPos[0].y;
-		objStandingOnIdx = -1;
-		for(var objNum = 0; objNum < gameObjects.length - 10; objNum++)
+		currMaxDist = -3.25;
+		if(activateNextLevel)
 		{
-			objSpeeds[objNum] += 0.005 * objSpeeds[objNum]/Math.abs(objSpeeds[objNum]);
-		}
-		if(level == 5)
-		{
-			theme.pause();
-			theme.currentTime = 0;
-			win.play();
-			levelElement.innerHTML = "You Win!";
-		}
-		else
-		{
-			level++;
-			levelElement.innerHTML = "Level: " + level;
+			coin.play();
+			currMaxDist = -3.25;
+			lives = 3;
+			livesElement.innerHTML = "Lives: " + lives;            
+			points+=1000;
+			pointsElement.innerHTML = "Score: " + points;	
+
+			for(var objNum = 0; objNum < gameObjects.length - 10; objNum++)
+			{
+				objSpeeds[objNum] += 0.005 * objSpeeds[objNum]/Math.abs(objSpeeds[objNum]);
+			}
+			if(level == 5)
+			{
+				theme.pause();
+				theme.currentTime = 0;
+				win.play();
+				levelElement.innerHTML = "You Win!";
+			}
+			else
+			{
+				level++;
+				levelElement.innerHTML = "Level: " + level;
+			}
 		}
 	}
 }
