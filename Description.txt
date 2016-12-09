@@ -1,0 +1,3 @@
+This game was made using Three.js. All assets are original Frogger assets except for the lilypad and star images.
+Use wasd to move across the road and river to get to a lilypad to complete a level. Cars and logs will speed up as you
+progress through the levels.

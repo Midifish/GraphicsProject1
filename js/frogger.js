@@ -92,7 +92,7 @@ var jump = new Audio('sounds/sound-frogger-hop.wav');
 var squash = new Audio('sounds/sound-frogger-squash.wav');
 var coin = new Audio('sounds/sound-frogger-coin-in.wav');
 var plunk = new Audio('sounds/sound-frogger-plunk.wav');
-var theme = new Audio('sounds/sound-frogger-theme.wav');
+var theme = new Audio('sounds/sound-frogger-theme.ogg');
 var gameover = new Audio('sounds/sound-frogger-gameover.mp3');
 var win = new Audio('sounds/sound-frogger-win.wav');
 
