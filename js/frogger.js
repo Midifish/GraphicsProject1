@@ -423,7 +423,7 @@ function checkCollisions()
 			case (gameObjects.length - 7):
 				if(star4.position.z != 0.4)
 				{
-					star5.position.z = 0.4;
+					star4.position.z = 0.4;
 					activateNextLevel = true;
 				}
 				break;
